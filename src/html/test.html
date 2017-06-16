@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width">
+  <title>JS Bin</title>
+</head>
+<body>
+
+	<canvas id="myCanvas" width="800" height="600" style="border:1px solid #000000;">
+	</canvas>
+	<div id="debug"> </div>
+</body>
+<script src="String.js"></script>
+<script src="date.js"></script>
+<script src="KPA2015WTSHlong.js"></script>
+<script>
+  var c = document.getElementById("myCanvas");
+  var ctx = c.getContext("2d");
+  
+  var state = {
+	  't': 0,
+	  'i': 0,
+	  'dur': 15000
+  }
+  
+  // Converting coordinates
+  var lonmin = Math.min(...bird.Longitude);
+  var lonmax = Math.max(...bird.Longitude);
+  var latmin = Math.min(...bird.Latitude);
+  var latmax = Math.max(...bird.Latitude);
+  var coord = function(lat, lon) {
+	  var x = (lon - lonmin) / (lonmax - lonmin) * c.width;
+	  var y = (lat - latmin) / (latmax - latmin) * c.height;
+	  return [x, y];
+  };
+  
+  // Converting time
+  var starttime = Date.now();
+  var tmin = Math.min(...bird.TimestampUTC);
+  var tmax = Math.max(...bird.TimestampUTC);
+  var timeUTC = function() {
+	  var timesince = (Date.now() - starttime)
+	  var progress = (timesince % state.dur) / state.dur;
+	  state.t = tmin + progress * (tmax - tmin);
+	  state.i = Math.floor(progress * bird.TimestampUTC.length)
+	  if(state.i == bird.TimestampUTC.length) {
+	  	state.i = state.i - 1
+	  }
+  };
+  
+  // Interpolate points
+  interp = function() {
+	  var t0 = bird.TimestampUTC[state.i];
+  	  var t1 = bird.TimestampUTC[state.i + 1];
+	  var progress = (state.t - t0) / (t1 - t0);
+	  
+	  var lat0 = bird.Latitude[state.i];
+	  var lat1 = bird.Latitude[state.i + 1];
+	  var lat = lat0 + progress * (lat1 - lat0);
+	  var lon0 = bird.Longitude[state.i];
+	  var lon1 = bird.Longitude[state.i + 1];
+	  var lon = lon0 + progress * (lon1 - lon0);
+	  var xy = coord(lat, lon);
+	  point.x = xy[0];
+	  point.y = xy[1];
+  }
+  
+  var point = {
+      'x': 20,
+      'y': 20,
+      'r': 5,
+      'fill': '#0000FF'
+  };
+  
+  var update = function() {
+	  // Update time
+	  timeUTC();
+	  
+	  // Update point
+	  interp();
+  }
+ 
+  var render = function() {
+	  // clear the canvas
+	  ctx.clearRect(0, 0, c.width, c.height);
+	  
+	  // draw the point
+      ctx.beginPath();
+      ctx.arc(point.x, point.y, point.r, 0*Math.PI, 2*Math.PI);
+      ctx.fillStyle = point.fill;
+      ctx.fill();
+	  
+	  ctx.font="14px Arial";
+	  var d = new Date(state.t);
+	  var stateStr = 'state: t=%s, i=%d, dur=%d'.sprintf(
+		  d.toISOString(), 
+	      state.i, 
+	      state.dur);
+	  ctx.strokeText(stateStr, 10, 50);
+	  var pointStr = 'point: x=%d, y=%d'.sprintf(
+		  point.x, 
+	      point.y);
+	  ctx.strokeText(pointStr, 10, 75);
+	  
+	  // redraw
+      requestAnimationFrame(render);
+  };
+  
+  var loop = function() {
+	  update();
+	  render();
+	  requestAnimationFrame(loop);
+  }
+  
+  loop();
+</script>
+</html>
